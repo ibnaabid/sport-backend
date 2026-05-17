@@ -5,7 +5,7 @@ const express = require('express')
 const cors = require('cors')
 const app = express()
 const port = process.env.PORT || 5000
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = process.env.MONGO 
 
 app.use(cors())
@@ -41,6 +41,16 @@ async function run() {
     app.get("/add" , async(req,res)=>{
       const result = await collection.find().toArray()
       res.json(result)
+    })
+
+    // for dynamic specific
+
+    app.get("/add/:id", async(req,res)=>{
+      const {id} = req.params
+      const findone = await collection.findOne({
+        _id: new ObjectId(id)
+      })
+      res.json(findone)
     })
    
     await client.db("admin").command({ ping: 1 });
