@@ -6,6 +6,7 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { jwtVerify, createRemoteJWKSet } = require("jose-cjs");
 const uri = process.env.MONGODB_URI;
 
 app.use(cors());
@@ -22,6 +23,52 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
+
+const jwtToken = async(req,res,next)=>{
+
+ try{
+
+ const authHeader =req.headers.authorization;
+
+ if(!authHeader){
+
+ return res.status(401).json({
+ message:"Unauthorized"
+ })
+
+ }
+
+ const token =authHeader.split(" ")[1];
+
+ if(!token){
+
+ return res.status(401).json({
+ message:"Unauthorized"
+ })
+
+ }
+
+ const JWKS =createRemoteJWKSet(
+ new URL('http://localhost:3000/api/auth/jwks'));
+
+ const {payload} =await jwtVerify(token,JWKS
+ );
+
+ 
+
+ next();
+
+ }
+
+ catch(error){
+
+ return res.status(401).json({
+ message:"Invalid Token"
+ })
+
+ }
+
+}
 
 async function run() {
   try {
@@ -98,30 +145,21 @@ app.delete("/manage/:id", async(req,res)=>{
 
 //  filter 
 app.get("/facilities", async (req, res) => {
-
   const search = req.query.search || "";
-  const sport = req.query.sport;
+  const sport = req.query.sport || "";
 
   let query = {};
 
-  // 🔍 Search by facility name
   if (search) {
-    query.facilityName = {
-      $regex: search,
-      $options: "i"
-    };
+    query.sportName = { $regex: search, $options: "i" }; 
   }
 
-  // 🎯 Filter by sport type
   if (sport) {
-    query.sportType = {
-      $in: [sport]
-    };
+    query.sportType = { $in: [sport] }; 
   }
 
-  const result = await facilityCollection.find(query).toArray();
-
-  res.send(result);
+  const result = await sportCollection.find(query).toArray(); 
+  res.json(result);
 });
 
 
