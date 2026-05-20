@@ -75,6 +75,16 @@ async function run() {
     })
 
 
+    // manage edit;
+   app.patch("/manage/:id", async (req, res) => {
+  const { id } = req.params;
+  const body = req.body;
+  const result = await sportCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: body }
+  );
+  res.json(result);
+});
 
 
 
