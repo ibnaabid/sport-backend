@@ -86,6 +86,43 @@ async function run() {
   res.json(result);
 });
 
+// maange delte:
+app.delete("/manage/:id", async(req,res)=>{
+  const {id}= req.params;
+  const deleteManage = await sportCollection.deleteOne({
+    _id: new ObjectId(id)
+  })
+  res.json(deleteManage)
+})
+
+
+//  filter 
+app.get("/facilities", async (req, res) => {
+
+  const search = req.query.search || "";
+  const sport = req.query.sport;
+
+  let query = {};
+
+  // 🔍 Search by facility name
+  if (search) {
+    query.facilityName = {
+      $regex: search,
+      $options: "i"
+    };
+  }
+
+  // 🎯 Filter by sport type
+  if (sport) {
+    query.sportType = {
+      $in: [sport]
+    };
+  }
+
+  const result = await facilityCollection.find(query).toArray();
+
+  res.send(result);
+});
 
 
 
