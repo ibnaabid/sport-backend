@@ -101,10 +101,7 @@ async function run() {
     });
 
     // all manage
-    app.get("/manage", jwtToken, async (req, res) => {
-  const result = await sportCollection.find().toArray();
-  res.json(result);
-});
+    
 
     // Manage Edit/Update Endpoint
     app.patch("/manage/:id", async (req, res) => {
@@ -118,7 +115,7 @@ async function run() {
     });
 
     // Manage Delete Endpoint
-    app.delete("/manage/:id",jwtToken, async(req, res) => {
+    app.delete("/manage/:id", async(req, res) => {
       const { id } = req.params;
       const deleteManage = await sportCollection.deleteOne({
         _id: new ObjectId(id)
