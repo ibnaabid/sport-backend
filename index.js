@@ -24,51 +24,28 @@ const client = new MongoClient(uri, {
   }
 });
 
-const jwtToken = async(req,res,next)=>{
+// Better Auth JWT Verification Middleware
+const jwtToken = async(req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
- try{
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
- const authHeader =req.headers.authorization;
-
- if(!authHeader){
-
- return res.status(401).json({
- message:"Unauthorized"
- })
-
- }
-
- const token =authHeader.split(" ")[1];
-
- if(!token){
-
- return res.status(401).json({
- message:"Unauthorized"
- })
-
- }
-
- const JWKS =createRemoteJWKSet(
- new URL('http://localhost:3000/api/auth/jwks'));
-
- const {payload} =await jwtVerify(token,JWKS
- );
-
- 
-
- next();
-
- }
-
- catch(error){
-
- return res.status(401).json({
- message:"Invalid Token"
- })
-
- }
-
-}
+    const JWKS = createRemoteJWKSet(new URL('http://localhost:3000/api/auth/jwks'));
+    const { payload } = await jwtVerify(token, JWKS);
+    
+    
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: "Invalid Token" });
+  }
+};
 
 async function run() {
   try {
@@ -78,19 +55,19 @@ async function run() {
     const sportCollection = db.collection("facility");
     const booking = db.collection("book-sport");
 
-    app.post("/add", async(req,res) => {
+    app.post("/add", async(req, res) => {
       const body = req.body;
       const result = await sportCollection.insertOne(body);
       res.json(result);
     });
 
-    app.get("/add", async(req,res) => {
+    app.get("/add", async(req, res) => {
       const result = await sportCollection.find().toArray();
       res.json(result);
     });
 
-    app.get("/add/:id", async(req,res) => {
-      const {id} = req.params;
+    app.get("/add/:id", async(req, res) => {
+      const { id } = req.params;
       const findone = await sportCollection.findOne({
         _id: new ObjectId(id)
       });
@@ -98,76 +75,86 @@ async function run() {
     });
 
     // Booking Post Endpoint
-    app.post("/booking", async(req,res) => {
+    app.post("/booking", async(req, res) => {
       const data = req.body;
       const result = await booking.insertOne(data);
       res.json(result);
     });
 
-    // Booking Get Endpoint (আইডি কুয়েরি ফিক্সড ট্র্যাকিং)
-    app.get("/booking/:userid", async(req,res) => {
+    // Booking Get Endpoint
+    app.get("/booking/:userid", async(req, res) => {
       const { userid } = req.params;
-      const bookdata = await booking.find({ userid: userid }).toArray(); // Explicitly mapping for safety
+      const bookdata = await booking.find({ userid: userid }).toArray();
       res.json(bookdata);
     });
-   
-
-    // booking delete
-    app.delete("/booking/:id",async(req,res)=>{
-      const {id} = req.params;
+    
+    // Booking Delete Endpoint
+    app.delete("/booking/:id", async(req, res) => {
+      const { id } = req.params;
       const deleteBooking = await booking.deleteOne({
         _id: new ObjectId(id)
-      })
-      res.json(deleteBooking)
-    })
+      });
+      res.json(deleteBooking);
+    });
 
+    // Manage Edit/Update Endpoint
+    app.patch("/manage/:id", async (req, res) => {
+      const { id } = req.params;
+      const body = req.body;
+      const result = await sportCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: body }
+      );
+      res.json(result);
+    });
 
-    // manage edit;
-   app.patch("/manage/:id", async (req, res) => {
-  const { id } = req.params;
-  const body = req.body;
-  const result = await sportCollection.updateOne(
-    { _id: new ObjectId(id) },
-    { $set: body }
-  );
-  res.json(result);
-});
+    // Manage Delete Endpoint
+    app.delete("/manage/:id", async(req, res) => {
+      const { id } = req.params;
+      const deleteManage = await sportCollection.deleteOne({
+        _id: new ObjectId(id)
+      });
+      res.json(deleteManage);
+    });
 
-// maange delte:
-app.delete("/manage/:id", async(req,res)=>{
-  const {id}= req.params;
-  const deleteManage = await sportCollection.deleteOne({
-    _id: new ObjectId(id)
-  })
-  res.json(deleteManage)
-})
-
-
-//  filter 
-app.get("/facilities", async (req, res) => {
+   
+ app.get("/facilities", (req, res, next) => {
+  const head = req.headers.authorization;
+  if (head === "logged in") {
+    next();
+  } else {
+    res.status(401).json({ message: "unauthorized" });
+  }
+}, async (req, res) => {
   const search = req.query.search || "";
   const sport = req.query.sport || "";
+
+  console.log("search:", search); 
+  console.log("sport:", sport);   
 
   let query = {};
 
   if (search) {
-    query.sportName = { $regex: search, $options: "i" }; 
+    query.sportName = { $regex: search, $options: "i" };
   }
 
   if (sport) {
-    query.sportType = { $in: [sport] }; 
+    query.sportName = { $in: [sport] };
   }
 
-  const result = await sportCollection.find(query).toArray(); 
+  console.log("query:", query);
+
+  const result = await sportCollection.find(query).toArray();
+
+  console.log("result count:", result.length);
+
   res.json(result);
 });
-
-
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
-    // Keep connection open
+    
   }
 }
 run().catch(console.dir);
