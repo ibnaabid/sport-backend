@@ -100,6 +100,12 @@ async function run() {
       res.json(deleteBooking);
     });
 
+    // all manage
+    app.get("/manage", jwtToken, async (req, res) => {
+  const result = await sportCollection.find().toArray();
+  res.json(result);
+});
+
     // Manage Edit/Update Endpoint
     app.patch("/manage/:id", async (req, res) => {
       const { id } = req.params;
@@ -119,6 +125,8 @@ async function run() {
       });
       res.json(deleteManage);
     });
+
+    // 
 
     app.get("/facilities",
 
