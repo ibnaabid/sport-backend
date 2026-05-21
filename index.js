@@ -23,28 +23,29 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
+const JWKS = createRemoteJWKSet(new URL('http://localhost:3000/api/auth/jwks'));
+console.log(JWKS)
 
-// Better Auth JWT Verification Middleware
 const jwtToken = async(req, res, next) => {
+const authHeader = req?.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const token = authHeader.split(" ")[1];
+  console.log(token)
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const token = authHeader.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const JWKS = createRemoteJWKSet(new URL('http://localhost:3000/api/auth/jwks'));
     const { payload } = await jwtVerify(token, JWKS);
-    
-    
+    console.log(payload);
     next();
   } catch (error) {
-    return res.status(401).json({ message: "Invalid Token" });
+    return res.status(403).json({ message: "Forbidden" });
   }
+
 };
 
 async function run() {
@@ -61,12 +62,12 @@ async function run() {
       res.json(result);
     });
 
-    app.get("/add", async(req, res) => {
+    app.get("/add",jwtToken, async(req, res) => {
       const result = await sportCollection.find().toArray();
       res.json(result);
     });
 
-    app.get("/add/:id", async(req, res) => {
+    app.get("/add/:id",jwtToken, async(req, res) => {
       const { id } = req.params;
       const findone = await sportCollection.findOne({
         _id: new ObjectId(id)
@@ -75,21 +76,21 @@ async function run() {
     });
 
     // Booking Post Endpoint
-    app.post("/booking", async(req, res) => {
+    app.post("/booking",jwtToken, async(req, res) => {
       const data = req.body;
       const result = await booking.insertOne(data);
       res.json(result);
     });
 
     // Booking Get Endpoint
-    app.get("/booking/:userid", async(req, res) => {
+    app.get("/booking/:userid",jwtToken, async(req, res) => {
       const { userid } = req.params;
       const bookdata = await booking.find({ userid: userid }).toArray();
       res.json(bookdata);
     });
     
     // Booking Delete Endpoint
-    app.delete("/booking/:id", async(req, res) => {
+    app.delete("/booking/:id",jwtToken, async(req, res) => {
       const { id } = req.params;
       const deleteBooking = await booking.deleteOne({
         _id: new ObjectId(id)
@@ -98,7 +99,7 @@ async function run() {
     });
 
     // Manage Edit/Update Endpoint
-    app.patch("/manage/:id", async (req, res) => {
+    app.patch("/manage/:id",jwtToken, async (req, res) => {
       const { id } = req.params;
       const body = req.body;
       const result = await sportCollection.updateOne(
@@ -109,7 +110,7 @@ async function run() {
     });
 
     // Manage Delete Endpoint
-    app.delete("/manage/:id", async(req, res) => {
+    app.delete("/manage/:id",jwtToken, async(req, res) => {
       const { id } = req.params;
       const deleteManage = await sportCollection.deleteOne({
         _id: new ObjectId(id)
@@ -117,39 +118,51 @@ async function run() {
       res.json(deleteManage);
     });
 
-   
- app.get("/facilities", (req, res, next) => {
-  const head = req.headers.authorization;
-  if (head === "logged in") {
-    next();
-  } else {
-    res.status(401).json({ message: "unauthorized" });
-  }
-}, async (req, res) => {
-  const search = req.query.search || "";
-  const sport = req.query.sport || "";
+    app.get("/facilities",
+    
 
-  console.log("search:", search); 
-  console.log("sport:", sport);   
+      async (req, res) => {
 
-  let query = {};
+        const search =
+          req.query.search || "";
 
-  if (search) {
-    query.sportName = { $regex: search, $options: "i" };
-  }
+        const sport =
+          req.query.sport || "";
 
-  if (sport) {
-    query.sportName = { $in: [sport] };
-  }
+        let query = {};
 
-  console.log("query:", query);
+        if (search) {
 
-  const result = await sportCollection.find(query).toArray();
+          query.sportName = {
 
-  console.log("result count:", result.length);
+            $regex: search,
 
-  res.json(result);
-});
+            $options: "i"
+
+          };
+
+        }
+
+        if (sport) {
+
+          query.sportType = {
+
+            $in: [sport]
+
+          };
+
+        }
+
+        const result =
+          await sportCollection
+            .find(query)
+            .toArray();
+
+        res.json(result);
+
+      }
+    );
+
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
