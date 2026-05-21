@@ -23,11 +23,13 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
-const JWKS = createRemoteJWKSet(new URL('http://localhost:3000/api/auth/jwks'));
+
+const JWKS = createRemoteJWKSet(new URL(`${process.env.CLIENT_URL}/api/auth/jwks`));
 console.log(JWKS)
 
 const jwtToken = async(req, res, next) => {
 const authHeader = req?.headers.authorization;
+console.log(authHeader)
   if (!authHeader) {
     return res.status(401).json({ message: "Unauthorized" });
   }
@@ -50,7 +52,7 @@ const authHeader = req?.headers.authorization;
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     const db = client.db("sportsData");
     const sportCollection = db.collection("facility");
@@ -83,14 +85,14 @@ async function run() {
     });
 
     // Booking Get Endpoint
-    app.get("/booking/:userid",jwtToken, async(req, res) => {
+    app.get("/booking/:userid", async(req, res) => {
       const { userid } = req.params;
       const bookdata = await booking.find({ userid: userid }).toArray();
       res.json(bookdata);
     });
     
     // Booking Delete Endpoint
-    app.delete("/booking/:id",jwtToken, async(req, res) => {
+    app.delete("/booking/:id", async(req, res) => {
       const { id } = req.params;
       const deleteBooking = await booking.deleteOne({
         _id: new ObjectId(id)
@@ -99,7 +101,7 @@ async function run() {
     });
 
     // Manage Edit/Update Endpoint
-    app.patch("/manage/:id",jwtToken, async (req, res) => {
+    app.patch("/manage/:id", async (req, res) => {
       const { id } = req.params;
       const body = req.body;
       const result = await sportCollection.updateOne(
@@ -119,6 +121,7 @@ async function run() {
     });
 
     app.get("/facilities",
+
     
 
       async (req, res) => {
@@ -164,7 +167,7 @@ async function run() {
     );
 
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     
