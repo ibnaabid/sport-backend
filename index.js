@@ -78,7 +78,7 @@ async function run() {
     });
 
     // Booking Post Endpoint
-    app.post("/booking",jwtToken, async(req, res) => {
+    app.post("/booking", async(req, res) => {
       const data = req.body;
       const result = await booking.insertOne(data);
       res.json(result);
