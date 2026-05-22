@@ -69,7 +69,7 @@ async function run() {
       res.json(result);
     });
 
-    app.get("/add/:id",jwtToken, async(req, res) => {
+    app.get("/add/:id", async(req, res) => {
       const { id } = req.params;
       const findone = await sportCollection.findOne({
         _id: new ObjectId(id)
